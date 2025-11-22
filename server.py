@@ -6,14 +6,11 @@ from datetime import datetime, timedelta
 import requests
 import os
 from dotenv import load_dotenv
-import openai
+import ai_client
 
 load_dotenv()
 
 app = Flask(__name__)
-
-# Configure OpenAI
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def get_weather_forecast(city, days=7):
     """Get extended forecast for agricultural planning"""
@@ -58,92 +55,66 @@ def get_uv_index(lat, lon):
         return 0
 
 def get_ai_agricultural_analysis(weather_data, forecast_data, gdd, frost_risk, uv_index, city):
-    """Get AI-powered agricultural analysis using OpenAI"""
+    """Get AI-powered agricultural analysis by delegating to ai_client.generate_ai_analysis.
+
+    The ai_client will call OpenAI if an API key is configured. We pass a simple climate label
+    (rain, winter, sunny, etc.) so the model focuses on climate-driven precautions for farmers.
+    """
     try:
-        # Prepare weather summary for AI
-        current_temp = weather_data['main']['temp']
-        humidity = weather_data['main']['humidity']
-        wind_speed = weather_data['wind']['speed']
-        precipitation = sum([day.get('precipitation', 0) for day in forecast_data[:3]])  # Next 3 days
-        
-        prompt = f"""
-        As an agricultural AI advisor, analyze the following weather conditions for {city} and provide specific farming recommendations:
+        # Derive a simple climate label from current weather
+        main_cond = weather_data.get('weather', [{}])[0].get('main', '').lower()
+        temp = weather_data['main']['temp']
 
-        Current Conditions:
-        - Temperature: {current_temp}°F
-        - Humidity: {humidity}%
-        - Wind Speed: {wind_speed} mph
-        - Growing Degree Days: {gdd}
-        - Frost Risk: {frost_risk}
-        - UV Index: {uv_index}
-        - Expected precipitation (next 3 days): {precipitation} inches
+        if 'rain' in main_cond or 'drizzle' in main_cond or 'thunderstorm' in main_cond:
+            climate_label = 'rain'
+        elif 'snow' in main_cond or temp <= 36:
+            climate_label = 'winter'
+        elif 'clear' in main_cond or 'sun' in main_cond:
+            climate_label = 'sunny'
+        else:
+            climate_label = main_cond or 'moderate'
 
-        Please provide:
-        1. Irrigation Management (specific timing and amount recommendations)
-        2. Pest & Disease Management (specific risks and prevention measures)
-        3. Field Operations (optimal timing for planting, spraying, harvesting)
-        4. Crop Development Analysis (growth stage assessment and next steps)
+        # Delegate to ai_client which returns a structured analysis
+        ai_out = ai_client.generate_ai_analysis(climate_label=climate_label, city=city)
 
-        Format the response as JSON with keys: irrigation_analysis, pest_analysis, field_analysis, crop_analysis
-        Each should include 'recommendation' and 'priority' (High/Medium/Low) fields.
-        """
+        # ai_client returns recommendations with 'recommendation' and 'confidence' keys.
+        # Map confidence->priority for compatibility with templates
+        def _priority_from_conf(c):
+            try:
+                c = int(c)
+            except Exception:
+                return 'Medium'
+            if c >= 80:
+                return 'High'
+            if c >= 60:
+                return 'Medium'
+            return 'Low'
 
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are an expert agricultural advisor with deep knowledge of crop management, weather patterns, and farming best practices."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=1000,
-            temperature=0.7
-        )
-        
-        ai_response = response.choices[0].message.content
-        
-        # Try to parse JSON response
-        try:
-            return json.loads(ai_response)
-        except:
-            # Fallback if JSON parsing fails
-            return {
-                "irrigation_analysis": {
-                    "recommendation": "AI analysis suggests monitoring soil moisture levels closely based on current weather patterns.",
-                    "priority": "Medium"
-                },
-                "pest_analysis": {
-                    "recommendation": "Weather conditions indicate moderate pest activity. Implement preventive measures.",
-                    "priority": "Medium"
-                },
-                "field_analysis": {
-                    "recommendation": "Current conditions are suitable for most field operations with proper timing.",
-                    "priority": "Good"
-                },
-                "crop_analysis": {
-                    "recommendation": f"GDD accumulation of {gdd} indicates normal crop development progress.",
-                    "priority": "Optimal"
-                }
-            }
-            
-    except Exception as e:
-        print(f"AI Analysis Error: {e}")
-        # Fallback recommendations
         return {
-            "irrigation_analysis": {
-                "recommendation": "Monitor soil moisture. Consider irrigation if no rain in next 3 days.",
-                "priority": "Medium"
+            'irrigation_analysis': {
+                'recommendation': ai_out['irrigation_analysis']['recommendation'],
+                'priority': _priority_from_conf(ai_out['irrigation_analysis'].get('confidence', 50))
             },
-            "pest_analysis": {
-                "recommendation": "Moderate humidity levels. Monitor for fungal diseases during warm periods.",
-                "priority": "Medium"
+            'pest_analysis': {
+                'recommendation': ai_out['pest_analysis']['recommendation'],
+                'priority': _priority_from_conf(ai_out['pest_analysis'].get('confidence', 50))
             },
-            "field_analysis": {
-                "recommendation": "Good conditions for field work. Plan operations during dry periods.",
-                "priority": "Good"
+            'field_analysis': {
+                'recommendation': ai_out['field_analysis']['recommendation'],
+                'priority': _priority_from_conf(ai_out['field_analysis'].get('confidence', 50))
             },
-            "crop_analysis": {
-                "recommendation": f"Accumulating {gdd:.1f} GDD today. Crop development on track.",
-                "priority": "Optimal"
+            'crop_analysis': {
+                'recommendation': ai_out['crop_analysis']['recommendation'],
+                'priority': _priority_from_conf(ai_out['crop_analysis'].get('confidence', 50))
             }
+        }
+    except Exception:
+        # Fallback simple messages
+        return {
+            "irrigation_analysis": {"recommendation": "Monitor soil moisture and delay irrigation if rain is expected.", "priority": "Medium"},
+            "pest_analysis": {"recommendation": "Inspect fields for pests and disease if warm/wet conditions persist.", "priority": "Medium"},
+            "field_analysis": {"recommendation": "Avoid heavy machinery during wet soil conditions to prevent compaction.", "priority": "Low"},
+            "crop_analysis": {"recommendation": "Adjust fertilization and scouting based on crop stage.", "priority": "Medium"},
         }
 
 @app.route('/')
