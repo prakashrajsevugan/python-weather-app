@@ -3,15 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GET WEATHER DATA</title>
-    <link href="{{url_for('static', filename='styles/style.css')}}" rel="stylesheet">
+    <title>AgriWeather - Smart Farming Weather Platform</title>
+    <link href="{{url_for('static', filename='styles/agricultural-style.css')}}" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-    <h2>Get weather Condition</h2>
-    <form action="/weather">
-        <input type="text" name="city" placeholder="Enter city name" id="city" required>
-        <button type="submit">Submit</button>
-    </form>
-    
+    <div class="hero-section">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <i class="fas fa-seedling"></i>
+                <span>AgriWeather</span>
+            </div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#dashboard">Dashboard</a>
+                <a href="#alerts">Alerts</a>
+            </div>
+        </nav>
+
+        <div class="hero-content">
+            <h1>Smart Weather Intelligence for Modern Agriculture</h1>
+            <p>Get precise weather forecasts, crop-specific insights, and farming recommendations tailored for your location</p>
+            
+            <div class="search-container">
+                <form action="/agricultural-dashboard" class="weather-form">
+                    <div class="input-group">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <input type="text" name="city" placeholder="Enter your farm location" required>
+                        <button type="submit">
+                            <i class="fas fa-search"></i>
+                            Get Weather Insights
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="quick-stats">
+                <div class="stat-card">
+                    <i class="fas fa-thermometer-half"></i>
+                    <h3>Temperature Monitoring</h3>
+                    <p>Real-time temperature tracking with frost alerts</p>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-tint"></i>
+                    <h3>Irrigation Planning</h3>
+                    <p>Smart irrigation scheduling based on weather forecasts</p>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-bug"></i>
+                    <h3>Pest & Disease</h3>
+                    <p>Weather-based pest and disease risk assessment</p>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-calendar-alt"></i>
+                    <h3>Crop Calendar</h3>
+                    <p>Optimal planting and harvesting time recommendations</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="features-section" id="features">
+        <div class="container">
+            <h2>Comprehensive Agricultural Weather Tools</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Growing Degree Days</h3>
+                    <p>Track crop development with accurate GDD calculations for better harvest timing</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-snowflake"></i>
+                    </div>
+                    <h3>Frost Protection</h3>
+                    <p>Early frost warnings to protect your crops with timely alerts and recommendations</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-sun"></i>
+                    </div>
+                    <h3>UV Index Monitoring</h3>
+                    <p>Monitor UV levels for crop stress assessment and worker safety guidelines</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-wind"></i>
+                    </div>
+                    <h3>Wind Analysis</h3>
+                    <p>Wind speed and direction data for spraying conditions and crop protection</p>
+                </div>
+            </div>
+        </div>
+    </section>
 </body>
 </html>

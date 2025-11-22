@@ -3,17 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>City Not Found</title>
-    <link href="{{url_for('static', filename='styles/style.css')}}" rel="stylesheet">
+    <title>City Not Found - AgriWeather</title>
+    <link href="{{url_for('static', filename='styles/agricultural-style.css')}}" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-    <h1>City Not Found</h1>
-    <h2>Try Again?</h2>
-    <p>Feels like {{feels_like}}&deg;</p>
-    <form action="/weather">
-        <input type="text" name="city" placeholder="Enter city name" id="city" required>
-        <button type="submit">Submit</button>
-    </form>
-    
+    <div class="hero-section">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <i class="fas fa-seedling"></i>
+                <span>AgriWeather</span>
+            </div>
+        </nav>
+        
+        <div class="hero-content">
+            <div class="error-container">
+                <i class="fas fa-map-marker-alt-slash" style="font-size: 4rem; color: #ff6b6b; margin-bottom: 2rem;"></i>
+                <h1>City Not Found</h1>
+                <p>We couldn't find weather data for that location. Please check the spelling and try again.</p>
+                
+                <div class="search-container">
+                    <form action="/agricultural-dashboard" class="weather-form">
+                        <div class="input-group">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <input type="text" name="city" placeholder="Enter a valid city name" required>
+                            <button type="submit">
+                                <i class="fas fa-search"></i>
+                                Try Again
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <a href="/" class="back-home">
+                    <i class="fas fa-home"></i>
+                    Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

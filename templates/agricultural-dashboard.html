@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ city }} - Agricultural Weather Dashboard</title>
+    <link href="{{url_for('static', filename='styles/agricultural-style.css')}}" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="dashboard-nav">
+        <div class="nav-brand">
+            <i class="fas fa-seedling"></i>
+            <span>AgriWeather</span>
+        </div>
+        <div class="location-info">
+            <i class="fas fa-map-marker-alt"></i>
+            <span>{{ city }}</span>
+        </div>
+        <div class="nav-actions">
+            <button class="refresh-btn" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+            <a href="/" class="home-btn">
+                <i class="fas fa-home"></i>
+            </a>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <!-- Alert Banner -->
+        {% if alerts %}
+        <div class="alert-banner">
+            {% for alert in alerts %}
+            <div class="alert alert-{{ alert.type }}">
+                <i class="fas fa-{{ alert.icon }}"></i>
+                <span>{{ alert.message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Current Weather Overview -->
+        <div class="weather-overview">
+            <div class="current-weather-card">
+                <div class="weather-main">
+                    <div class="weather-icon">
+                        <i class="fas fa-{{ weather_icon }}"></i>
+                    </div>
+                    <div class="weather-info">
+                        <h2>{{ "%.1f"|format(current.main.temp) }}°F</h2>
+                        <p>{{ current.weather[0].description.title() }}</p>
+                        <p class="feels-like">Feels like {{ "%.1f"|format(current.main.feels_like) }}°F</p>
+                    </div>
+                </div>
+                
+                <div class="weather-details">
+                    <div class="detail-item">
+                        <i class="fas fa-eye"></i>
+                        <span>Visibility</span>
+                        <span>{{ (current.visibility / 1000) | round(1) }} km</span>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-tint"></i>
+                        <span>Humidity</span>
+                        <span>{{ current.main.humidity }}%</span>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-compress-arrows-alt"></i>
+                        <span>Pressure</span>
+                        <span>{{ current.main.pressure }} hPa</span>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-wind"></i>
+                        <span>Wind</span>
+                        <span>{{ current.wind.speed }} mph</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agricultural Metrics Cards -->
+            <div class="agri-metrics-cards">
+                <div class="metric-card uv-card">
+                    <div class="metric-header">
+                        <i class="fas fa-sun"></i>
+                        <h3>UV Index</h3>
+                    </div>
+                    <div class="metric-value uv-{{ 'high' if uv_index > 6 else 'moderate' if uv_index > 3 else 'low' }}">
+                        {{ uv_index }}
+                    </div>
+                    <div class="metric-status">
+                        {{ 'Very High' if uv_index > 8 else 'High' if uv_index > 6 else 'Moderate' if uv_index > 3 else 'Low' }}
+                    </div>
+                </div>
+
+                <div class="metric-card gdd-card">
+                    <div class="metric-header">
+                        <i class="fas fa-thermometer-half"></i>
+                        <h3>Growing Degree Days</h3>
+                    </div>
+                    <div class="metric-value">
+                        {{ "%.1f"|format(current_gdd) }}
+                    </div>
+                    <div class="metric-status">Today's GDD</div>
+                </div>
+
+                <div class="metric-card frost-card">
+                    <div class="metric-header">
+                        <i class="fas fa-snowflake"></i>
+                        <h3>Frost Risk</h3>
+                    </div>
+                    <div class="metric-value risk-{{ frost_risk.replace(' ', '-').lower() }}">
+                        {{ frost_risk }}
+                    </div>
+                    <div class="metric-status">Next 24 hours</div>
+                </div>
+
+                <div class="metric-card irrigation-card">
+                    <div class="metric-header">
+                        <i class="fas fa-tint"></i>
+                        <h3>Irrigation Need</h3>
+                    </div>
+                    <div class="metric-value need-{{ irrigation_need.lower() }}">
+                        {{ irrigation_need }}
+                    </div>
+                    <div class="metric-status">Based on forecast</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7-Day Forecast -->
+        <div class="forecast-section">
+            <h2><i class="fas fa-calendar-week"></i> 7-Day Agricultural Forecast</h2>
+            <div class="forecast-container">
+                {% for day in forecasts %}
+                <div class="forecast-day">
+                    <div class="day-header">
+                        <h3>{{ day.date_formatted }}</h3>
+                        <div class="weather-icon-small">
+                            <i class="fas fa-{{ day.weather_icon }}"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="day-temps">
+                        <span class="temp-high">{{ "%.0f"|format(day.temp_max) }}°</span>
+                        <span class="temp-low">{{ "%.0f"|format(day.temp_min) }}°</span>
+                    </div>
+
+                    <div class="day-details">
+                        <div class="detail-row">
+                            <i class="fas fa-tint"></i>
+                            <span>{{ "%.1f"|format(day.precipitation) }}"</span>
+                        </div>
+                        <div class="detail-row">
+                            <i class="fas fa-wind"></i>
+                            <span>{{ "%.0f"|format(day.wind_speed) }} mph</span>
+                        </div>
+                        <div class="detail-row">
+                            <i class="fas fa-percentage"></i>
+                            <span>{{ day.humidity }}%</span>
+                        </div>
+                    </div>
+
+                    <div class="agri-indicators">
+                        <div class="indicator gdd-indicator">
+                            <span class="label">GDD:</span>
+                            <span class="value">{{ "%.1f"|format(day.gdd) }}</span>
+                        </div>
+                        <div class="indicator frost-indicator">
+                            <span class="label">Frost:</span>
+                            <span class="value risk-{{ day.frost_risk.replace(' ', '-').lower() }}">
+                                {{ day.frost_risk.split()[0] }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-section">
+            <div class="chart-container">
+                <h3><i class="fas fa-chart-line"></i> Temperature & Humidity Trends</h3>
+                <canvas id="tempHumidityChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3><i class="fas fa-chart-bar"></i> Growing Degree Days Accumulation</h3>
+                <canvas id="gddChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Agricultural Recommendations -->
+        <div class="recommendations-section">
+            <h2><i class="fas fa-lightbulb"></i> Smart Farming Recommendations</h2>
+            <div class="recommendations-grid">
+                <div class="rec-card irrigation-rec">
+                    <div class="rec-header">
+                        <i class="fas fa-tint"></i>
+                        <h3>Irrigation Management</h3>
+                    </div>
+                    <div class="rec-content">
+                        <p>{{ irrigation_recommendation }}</p>
+                        <div class="rec-actions">
+                            <span class="priority priority-{{ irrigation_priority.lower() }}">{{ irrigation_priority }} Priority</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rec-card pest-rec">
+                    <div class="rec-header">
+                        <i class="fas fa-bug"></i>
+                        <h3>Pest & Disease Management</h3>
+                    </div>
+                    <div class="rec-content">
+                        <p>{{ pest_recommendation }}</p>
+                        <div class="rec-actions">
+                            <span class="priority priority-{{ pest_priority.lower() }}">{{ pest_priority }} Risk</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rec-card field-rec">
+                    <div class="rec-header">
+                        <i class="fas fa-tractor"></i>
+                        <h3>Field Operations</h3>
+                    </div>
+                    <div class="rec-content">
+                        <p>{{ field_recommendation }}</p>
+                        <div class="rec-actions">
+                            <span class="priority priority-{{ field_priority.lower() }}">{{ field_priority }} Conditions</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rec-card crop-rec">
+                    <div class="rec-header">
+                        <i class="fas fa-seedling"></i>
+                        <h3>Crop Development</h3>
+                    </div>
+                    <div class="rec-content">
+                        <p>{{ crop_recommendation }}</p>
+                        <div class="rec-actions">
+                            <span class="priority priority-optimal">Growth Stage: {{ crop_stage }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- AI Agricultural Analysis Section -->
+        <div class="ai-analysis-section">
+            <h2><i class="fas fa-robot"></i> AI Agricultural Analysis</h2>
+            <div class="ai-analysis-container">
+                <div class="ai-header">
+                    <div class="ai-badge">
+                        <i class="fas fa-brain"></i>
+                        <span>AI Powered Insights</span>
+                    </div>
+                    <p>Advanced agricultural recommendations generated by artificial intelligence based on current and forecasted weather conditions.</p>
+                </div>
+                
+                <div class="ai-recommendations-grid">
+                    <div class="ai-rec-card">
+                        <div class="ai-rec-header">
+                            <div class="ai-icon">
+                                <i class="fas fa-droplet"></i>
+                            </div>
+                            <h3>Smart Irrigation Analysis</h3>
+                        </div>
+                        <div class="ai-rec-content">
+                            <p>{{ ai_analysis.irrigation_analysis.recommendation }}</p>
+                            <div class="ai-confidence">
+                                <span class="confidence-label">AI Confidence:</span>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" style="width: 92%;"></div>
+                                </div>
+                                <span>92%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ai-rec-card">
+                        <div class="ai-rec-header">
+                            <div class="ai-icon">
+                                <i class="fas fa-shield-virus"></i>
+                            </div>
+                            <h3>Pest & Disease Intelligence</h3>
+                        </div>
+                        <div class="ai-rec-content">
+                            <p>{{ ai_analysis.pest_analysis.recommendation }}</p>
+                            <div class="ai-confidence">
+                                <span class="confidence-label">AI Confidence:</span>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" style="width: 88%;"></div>
+                                </div>
+                                <span>88%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ai-rec-card">
+                        <div class="ai-rec-header">
+                            <div class="ai-icon">
+                                <i class="fas fa-cogs"></i>
+                            </div>
+                            <h3>Field Operations Optimizer</h3>
+                        </div>
+                        <div class="ai-rec-content">
+                            <p>{{ ai_analysis.field_analysis.recommendation }}</p>
+                            <div class="ai-confidence">
+                                <span class="confidence-label">AI Confidence:</span>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" style="width: 95%;"></div>
+                                </div>
+                                <span>95%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ai-rec-card">
+                        <div class="ai-rec-header">
+                            <div class="ai-icon">
+                                <i class="fas fa-leaf"></i>
+                            </div>
+                            <h3>Crop Development Insights</h3>
+                        </div>
+                        <div class="ai-rec-content">
+                            <p>{{ ai_analysis.crop_analysis.recommendation }}</p>
+                            <div class="ai-confidence">
+                                <span class="confidence-label">AI Confidence:</span>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" style="width: 90%;"></div>
+                                </div>
+                                <span>90%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ai-footer">
+                    <div class="ai-disclaimer">
+                        <i class="fas fa-info-circle"></i>
+                        <span>AI recommendations are based on weather data analysis and should be combined with local agricultural expertise and field observations.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Temperature and Humidity Chart
+        const tempHumidityCtx = document.getElementById('tempHumidityChart').getContext('2d');
+        new Chart(tempHumidityCtx, {
+            type: 'line',
+            data: {
+                labels: {{ forecast_labels | safe }},
+                datasets: [{
+                    label: 'Temperature (°F)',
+                    data: {{ temp_data | safe }},
+                    borderColor: '#ff6b6b',
+                    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                    yAxisID: 'y'
+                }, {
+                    label: 'Humidity (%)',
+                    data: {{ humidity_data | safe }},
+                    borderColor: '#4ecdc4',
+                    backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    }
+                }
+            }
+        });
+
+        // GDD Chart
+        const gddCtx = document.getElementById('gddChart').getContext('2d');
+        new Chart(gddCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ forecast_labels | safe }},
+                datasets: [{
+                    label: 'Growing Degree Days',
+                    data: {{ gdd_data | safe }},
+                    backgroundColor: 'rgba(46, 204, 113, 0.8)',
+                    borderColor: '#2ecc71',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'GDD (°F-days)'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
